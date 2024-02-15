@@ -1,3 +1,1 @@
 # kawaii-shop
-
-# kawaii-shop
