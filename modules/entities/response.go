@@ -1,6 +1,9 @@
 package entities
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"github.com/bonxatiwat/kawaii-shop-tutortial/pkg/kawaiilogger"
+	"github.com/gofiber/fiber/v2"
+)
 
 type IResponse interface {
 	Success(code int, data any) IResponse
@@ -30,6 +33,7 @@ func NewResponse(c *fiber.Ctx) IResponse {
 func (r *Response) Success(code int, data any) IResponse {
 	r.StatusCode = code
 	r.Data = data
+	kawaiilogger.InitKawaiiLogger(r.Context, &r.Data).Print().Save()
 	return r
 }
 
@@ -40,6 +44,7 @@ func (r *Response) Error(code int, tractId, msg string) IResponse {
 		Msg:     msg,
 	}
 	r.IsError = true
+	kawaiilogger.InitKawaiiLogger(r.Context, &r.ErrorRes).Print().Save()
 	return r
 }
 
