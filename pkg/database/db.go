@@ -16,5 +16,6 @@ func DbConnect(cfg config.IDbConfig) *sqlx.DB {
 		log.Fatalf("connect to db failed: %v\n", err)
 	}
 	db.DB.SetMaxIdleConns(cfg.MaxOpenConns())
+
 	return db
 }
