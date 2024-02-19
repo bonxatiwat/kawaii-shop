@@ -1,13 +1,17 @@
 package usersUsecases
 
 import (
+	"fmt"
+
 	"github.com/bonxatiwat/kawaii-shop-tutortial/config"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/users"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/users/usersRepositories"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type IUsersUsecase interface {
 	InsertCustomer(req *users.UserRegisterReq) (*users.UserPassport, error)
+	GetPassport(req *users.UserCredential) (*users.UserPassport, error)
 }
 
 type usersUsecase struct {
@@ -34,4 +38,28 @@ func (u *usersUsecase) InsertCustomer(req *users.UserRegisterReq) (*users.UserPa
 		return nil, err
 	}
 	return result, nil
+}
+
+func (u *usersUsecase) GetPassport(req *users.UserCredential) (*users.UserPassport, error) {
+	// Find user
+	user, err := u.usersRepository.FindOneUserByEmail(req.Email)
+	if err != nil {
+		return nil, err
+	}
+
+	// Compare password
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
+		return nil, fmt.Errorf("password is invalid")
+	}
+
+	passport := &users.UserPassport{
+		User: &users.User{
+			Id:       user.Id,
+			Email:    user.Email,
+			Username: user.Username,
+			RoleId:   user.RoleId,
+		},
+		Token: nil,
+	}
+	return passport, nil
 }
