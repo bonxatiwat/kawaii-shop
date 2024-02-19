@@ -6,6 +6,7 @@ import (
 	"github.com/bonxatiwat/kawaii-shop-tutortial/config"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/users"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/users/usersRepositories"
+	"github.com/bonxatiwat/kawaii-shop-tutortial/pkg/kawaiiauth"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -52,6 +53,18 @@ func (u *usersUsecase) GetPassport(req *users.UserCredential) (*users.UserPasspo
 		return nil, fmt.Errorf("password is invalid")
 	}
 
+	// Sign Token
+	accessToken, err := kawaiiauth.NewKawaiiAuth(kawaiiauth.Access, u.cfg.Jwt(), &users.UserClaims{
+		Id:     user.Id,
+		RoleId: user.RoleId,
+	})
+
+	// Refresh Token
+	refreshToken, err := kawaiiauth.NewKawaiiAuth(kawaiiauth.Refresh, u.cfg.Jwt(), &users.UserClaims{
+		Id:     user.Id,
+		RoleId: user.RoleId,
+	})
+
 	passport := &users.UserPassport{
 		User: &users.User{
 			Id:       user.Id,
@@ -59,7 +72,14 @@ func (u *usersUsecase) GetPassport(req *users.UserCredential) (*users.UserPasspo
 			Username: user.Username,
 			RoleId:   user.RoleId,
 		},
-		Token: nil,
+		Token: &users.UserToken{
+			AccessToken:  accessToken.SignToken(),
+			RefreshToken: refreshToken.SignToken(),
+		},
+	}
+
+	if err := u.usersRepository.InsertOauth(passport); err != nil {
+		return nil, err
 	}
 	return passport, nil
 }

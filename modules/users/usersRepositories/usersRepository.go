@@ -1,7 +1,9 @@
 package usersRepositories
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/users"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/users/usersPatterns"
@@ -11,6 +13,7 @@ import (
 type IUsersRepository interface {
 	InsertUser(req *users.UserRegisterReq, isAdmin bool) (*users.UserPassport, error)
 	FindOneUserByEmail(email string) (*users.UserCredentialCheck, error)
+	InsertOauth(req *users.UserPassport) error
 }
 
 type usersRepository struct {
@@ -63,4 +66,28 @@ func (r *usersRepository) FindOneUserByEmail(email string) (*users.UserCredentia
 		return nil, fmt.Errorf("user not found")
 	}
 	return user, nil
+}
+
+func (r *usersRepository) InsertOauth(req *users.UserPassport) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	query := `
+	INSERT INTO "oauth" (
+		"user_id",
+		"refresh_token",
+		"access_token"
+	)
+	VALUES ($1, $2, $3)
+		RETURNING "id";`
+
+	if err := r.db.QueryRowContext(
+		ctx,
+		query,
+		req.User.Id,
+		req.Token.RefreshToken,
+		req.Token.AccessToken,
+	).Scan(&req.Token.Id); err != nil {
+		return fmt.Errorf("insert oauth failed: %v", err)
+	}
+	return nil
 }
