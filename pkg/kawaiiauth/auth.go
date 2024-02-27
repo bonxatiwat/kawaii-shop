@@ -1,6 +1,7 @@
 package kawaiiauth
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"time"
@@ -45,6 +46,48 @@ func (a *kawaiiAuth) SignToken() string {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, a.mapClaims)
 	ss, _ := token.SignedString(a.cfg.SecretKey())
 	return ss
+}
+
+func PassToken(cfg config.IJwtConfig, tokenString string) (*kawaiiMapCliams, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &kawaiiMapCliams{}, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("singing method is invaild")
+		}
+		return cfg.SecretKey(), nil
+	})
+	if err != nil {
+		if errors.Is(err, jwt.ErrTokenMalformed) {
+			return nil, fmt.Errorf("token format is invaild")
+		} else if errors.Is(err, jwt.ErrTokenExpired) {
+			return nil, fmt.Errorf("token has expried")
+		} else {
+			return nil, fmt.Errorf("pares token failed: %v", err)
+		}
+	}
+
+	if claims, ok := token.Claims.(*kawaiiMapCliams); ok {
+		return claims, nil
+	} else {
+		return nil, fmt.Errorf("claims type id invaild")
+	}
+}
+
+func RepeatToken(cfg config.IJwtConfig, cliams *users.UserClaims, exp int64) string {
+	obj := &kawaiiAuth{
+		cfg: cfg,
+		mapClaims: &kawaiiMapCliams{
+			Claims: cliams,
+			RegisteredClaims: jwt.RegisteredClaims{
+				Issuer:    "kawaiishop-api",
+				Subject:   "refresh-token",
+				Audience:  []string{"customer", "admin"},
+				ExpiresAt: jwtTimeRepeatAdapter(exp),
+				NotBefore: jwt.NewNumericDate(time.Now()),
+				IssuedAt:  jwt.NewNumericDate(time.Now()),
+			},
+		},
+	}
+	return obj.SignToken()
 }
 
 func NewKawaiiAuth(tokenType TokenType, cfg config.IJwtConfig, claims *users.UserClaims) (IKawaiiAuth, error) {
