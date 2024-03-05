@@ -7,6 +7,7 @@ import (
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/entities"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/middlewares/middlewareUsecases"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/pkg/kawaiiauth"
+	"github.com/bonxatiwat/kawaii-shop-tutortial/pkg/utils"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -18,6 +19,7 @@ const (
 	routerCheckErr middlewareHandlersErrCode = "middleware-001"
 	jwtAutErr      middlewareHandlersErrCode = "middleware-002"
 	paramsCheckErr middlewareHandlersErrCode = "middleware-003"
+	authorizeErr   middlewareHandlersErrCode = "middleware-004"
 )
 
 type IMiddelwaresHandler interface {
@@ -26,6 +28,7 @@ type IMiddelwaresHandler interface {
 	Logger() fiber.Handler
 	JwtAuth() fiber.Handler
 	ParamsCheck() fiber.Handler
+	Authorize(expctRoleId ...int) fiber.Handler
 }
 
 type middlewaresHandler struct {
@@ -109,5 +112,48 @@ func (h *middlewaresHandler) ParamsCheck() fiber.Handler {
 			).Res()
 		}
 		return c.Next()
+	}
+}
+
+func (h *middlewaresHandler) Authorize(expctRoleId ...int) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		userRoleId, ok := c.Locals("userRoleId").(int)
+		if !ok {
+			return entities.NewResponse(c).Error(
+				fiber.ErrUnauthorized.Code,
+				string(authorizeErr),
+				"user_id is not int type",
+			).Res()
+		}
+
+		roles, err := h.middlewareUsecases.FindRole()
+		if err != nil {
+			return entities.NewResponse(c).Error(
+				fiber.ErrInternalServerError.Code,
+				string(authorizeErr),
+				err.Error(),
+			).Res()
+		}
+
+		sum := 0
+		for _, v := range expctRoleId {
+			sum += v
+		}
+
+		expectedValueBinary := utils.BinaryConverter(sum, len(roles))
+		userValueBinary := utils.BinaryConverter(userRoleId, len(roles))
+
+		for i := range userValueBinary {
+			if userValueBinary[i]&expectedValueBinary[i] == 1 {
+				return c.Next()
+			}
+		}
+
+		return entities.NewResponse(c).Error(
+			fiber.ErrUnauthorized.Code,
+			string(authorizeErr),
+			"no permission to access",
+		).Res()
+
 	}
 }
