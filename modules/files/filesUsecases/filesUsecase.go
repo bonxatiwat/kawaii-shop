@@ -15,6 +15,7 @@ import (
 
 type IFilesUsecase interface {
 	UploadToGCP(req []*files.FileReq) ([]*files.FileRes, error)
+	DeleteFileOnGCP(req []*files.DeleteFileReq) error
 }
 
 type filesUsecase struct {
@@ -130,4 +131,59 @@ func (u *filesUsecase) UploadToGCP(req []*files.FileReq) ([]*files.FileRes, erro
 	}
 
 	return res, nil
+}
+
+// deleteFile removes specified object.
+func (u *filesUsecase) deleteFileWorkers(ctx context.Context, client *storage.Client, jobs <-chan *files.DeleteFileReq, errs chan<- error) {
+	for job := range jobs {
+		o := client.Bucket(u.cfg.App().GCPBucket()).Object(job.Destination)
+
+		attrs, err := o.Attrs(ctx)
+		if err != nil {
+			errs <- fmt.Errorf("object.Attrs: %w", err)
+			return
+		}
+		o = o.If(storage.Conditions{GenerationMatch: attrs.Generation})
+
+		if err := o.Delete(ctx); err != nil {
+			errs <- fmt.Errorf("Object(%q).Delete: %w", job.Destination, err)
+			return
+		}
+		fmt.Printf("Blob %v deleted.\n", job.Destination)
+
+		errs <- nil
+	}
+
+}
+
+func (u *filesUsecase) DeleteFileOnGCP(req []*files.DeleteFileReq) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
+	defer cancel()
+
+	client, err := storage.NewClient(ctx)
+	if err != nil {
+		return fmt.Errorf("storage.NewClient: %w", err)
+	}
+	defer client.Close()
+
+	jobsCh := make(chan *files.DeleteFileReq, len(req))
+	errsCh := make(chan error, len(req))
+
+	for _, r := range req {
+		jobsCh <- r
+	}
+	close(jobsCh)
+
+	numWorkers := 5
+	for i := 0; i < numWorkers; i++ {
+		// workser
+		go u.deleteFileWorkers(ctx, client, jobsCh, errsCh)
+	}
+
+	for a := 0; a < len(req); a++ {
+		err := <-errsCh
+		return err
+	}
+
+	return nil
 }
