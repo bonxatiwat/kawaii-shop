@@ -10,6 +10,9 @@ import (
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/middlewares/middlewareRepositories"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/middlewares/middlewareUsecases"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/monitor/monitorHandlers"
+	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/products/productsHandlers"
+	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/products/productsRepositories"
+	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/products/productsUsecases"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/users/usersHandlers"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/users/usersRepositories"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/users/usersUsecases"
@@ -21,6 +24,7 @@ type IModuleFactory interface {
 	UsersModule()
 	AppinfoModule()
 	FilesModule()
+	ProductsModule()
 }
 
 type moduleFactory struct {
@@ -91,4 +95,17 @@ func (m *moduleFactory) FilesModule() {
 
 	router.Post("/upload", m.mid.JwtAuth(), m.mid.Authorize(2), handler.UploadFiles)
 	router.Patch("/delete", m.mid.JwtAuth(), m.mid.Authorize(2), handler.DeleteFile)
+}
+
+func (m *moduleFactory) ProductsModule() {
+	filesUsecases := filesUsecases.FilesUsecase(m.s.cfg)
+
+	productsRepository := productsRepositories.ProductsRepository(m.s.db, m.s.cfg, filesUsecases)
+	productsUsecase := productsUsecases.ProductsUsecase(productsRepository)
+	productsHandler := productsHandlers.ProductsHandler(m.s.cfg, productsUsecase, filesUsecases)
+
+	router := m.r.Group("/products")
+
+	_ = productsHandler
+	_ = router
 }
