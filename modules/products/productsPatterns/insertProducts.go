@@ -10,7 +10,7 @@ import (
 )
 
 type IInsertProductBuilder interface {
-	intiTransaction() error
+	initTransaction() error
 	insertProduct() error
 	insertCategory() error
 	insertAttachment() error
@@ -39,7 +39,7 @@ func InsertProductEngineer(b IInsertProductBuilder) *insertProductEngineer {
 	return &insertProductEngineer{builder: b}
 }
 
-func (b *insertProductBuilder) intiTransaction() error {
+func (b *insertProductBuilder) initTransaction() error {
 	tx, err := b.db.BeginTxx(context.Background(), nil)
 	if err != nil {
 		return err
@@ -153,7 +153,7 @@ func (b *insertProductBuilder) getProductId() string {
 }
 
 func (en *insertProductEngineer) InsertProduct() (string, error) {
-	if err := en.builder.intiTransaction(); err != nil {
+	if err := en.builder.initTransaction(); err != nil {
 		return "", err
 	}
 	if err := en.builder.insertProduct(); err != nil {
