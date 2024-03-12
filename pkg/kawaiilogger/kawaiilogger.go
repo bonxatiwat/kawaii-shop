@@ -30,13 +30,13 @@ type kawaiiLogger struct {
 	Response   any    `json:"response"`
 }
 
-func InitKawaiiLogger(c *fiber.Ctx, res any) IKawaiiLogger {
+func InitKawaiiLogger(c *fiber.Ctx, res any, code int) IKawaiiLogger {
 	log := &kawaiiLogger{
 		Time:       time.Now().Local().Format("2006-01-92 15:04:05"),
 		Ip:         c.IP(),
 		Method:     c.Method(),
 		Path:       c.Path(),
-		StatusCode: c.Response().StatusCode(),
+		StatusCode: code,
 	}
 
 	log.SetQuery(c)
