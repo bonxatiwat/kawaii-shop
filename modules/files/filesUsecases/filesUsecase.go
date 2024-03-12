@@ -32,7 +32,7 @@ type filesPub struct {
 func (f *filesPub) makePublic(ctx context.Context, client *storage.Client) error {
 	acl := client.Bucket(f.bucket).Object(f.destination).ACL()
 	if err := acl.Set(ctx, storage.AllUsers, storage.RoleReader); err != nil {
-		return fmt.Errorf("ACLHandle.Set: %w", err)
+		return fmt.Errorf("ACLHandle.Set: %v", err)
 	}
 	fmt.Printf("Blob %v is now publicly accessible.\n", f.destination)
 	return nil
@@ -41,36 +41,37 @@ func (f *filesPub) makePublic(ctx context.Context, client *storage.Client) error
 // streamFileUpload uploads an object via a stream.
 func (u *filesUsecase) uploadWorkers(ctx context.Context, client *storage.Client, jobs <-chan *files.FileReq, results chan<- *files.FileRes, errs chan<- error) {
 	for job := range jobs {
-		container, err := job.File.Open()
+		cotainer, err := job.File.Open()
 		if err != nil {
 			errs <- err
 			return
 		}
-		b, err := ioutil.ReadAll(container)
+		b, err := ioutil.ReadAll(cotainer)
 		if err != nil {
 			errs <- err
 			return
 		}
 
 		buf := bytes.NewBuffer(b)
+
 		// Upload an object with storage.Writer.
 		wc := client.Bucket(u.cfg.App().GCPBucket()).Object(job.Destination).NewWriter(ctx)
 
 		if _, err = io.Copy(wc, buf); err != nil {
-			errs <- fmt.Errorf("io.Copy: %w", err)
+			errs <- fmt.Errorf("io.Copy: %v", err)
 			return
 		}
 		// Data can continue to be added to the file until the writer is closed.
 		if err := wc.Close(); err != nil {
-			errs <- fmt.Errorf("Writer.Close: %w", err)
+			errs <- fmt.Errorf("Writer.Close: %v", err)
 			return
 		}
-		fmt.Printf("%v uploaded to %v.\n", job.FileName, job.Destination)
+		fmt.Printf("%v uploaded to %v.\n", job.FileName, job.Extension)
 
 		newFile := &filesPub{
 			file: &files.FileRes{
 				FileName: job.FileName,
-				Url:      fmt.Sprintf("https://storage.googleapi.com/%s/%s", u.cfg.App().GCPBucket(), job.Destination),
+				Url:      fmt.Sprintf("https://storage.googleapis.com/%s/%s", u.cfg.App().GCPBucket(), job.Destination),
 			},
 			bucket:      u.cfg.App().GCPBucket(),
 			destination: job.Destination,
@@ -84,7 +85,6 @@ func (u *filesUsecase) uploadWorkers(ctx context.Context, client *storage.Client
 		errs <- nil
 		results <- newFile.file
 	}
-
 }
 
 func FilesUsecase(cfg config.IConfig) IFilesUsecase {
