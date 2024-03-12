@@ -104,8 +104,19 @@ func (r *appinfoRepository) DeleteCategory(categoryId int) error {
 
 	query := `DELETE FROM "categories" WHERE "id" = $1;`
 
-	if _, err := r.db.ExecContext(ctx, query, categoryId); err != nil {
+	result, err := r.db.ExecContext(ctx, query, categoryId)
+	if err != nil {
 		return fmt.Errorf("delete category failed: %v", err)
+	}
+
+	rowCount, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to retrieve affected rows: %v", err)
+	}
+
+	if rowCount == 0 {
+		// No rows were deleted
+		return fmt.Errorf("no rows were deleted")
 	}
 
 	return nil
