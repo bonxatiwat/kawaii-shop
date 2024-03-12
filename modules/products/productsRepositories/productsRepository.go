@@ -8,11 +8,13 @@ import (
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/entities"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/files/filesUsecases"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/products"
+	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/products/productsPatterns"
 	"github.com/jmoiron/sqlx"
 )
 
 type IProductsRepository interface {
 	FindOneProduct(productId string) (*products.Product, error)
+	FindProducts(req *products.ProductFilter) ([]*products.Product, int)
 }
 
 type productsRepository struct {
@@ -82,4 +84,13 @@ func (r *productsRepository) FindOneProduct(productId string) (*products.Product
 		return nil, fmt.Errorf("unmarshal product failed: %v", err)
 	}
 	return product, nil
+}
+
+func (r *productsRepository) FindProducts(req *products.ProductFilter) ([]*products.Product, int) {
+	builder := productsPatterns.FindProductBuilder(r.db, req)
+	engineer := productsPatterns.FindProductEngineer(builder)
+
+	result := engineer.FindProducts().Result()
+	count := engineer.CountProducts().Count()
+	return result, count
 }
