@@ -65,7 +65,7 @@ func (b *insertProductBuilder) insertProduct() error {
 		ctx,
 		query,
 		b.req.Title,
-		b.req.Descrioption,
+		b.req.Description,
 		b.req.Price,
 	).Scan(&b.req.Id); err != nil {
 		b.tx.Rollback()
