@@ -1,11 +1,13 @@
 package productsHandlers
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/bonxatiwat/kawaii-shop-tutortial/config"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/appinfo"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/entities"
+	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/files"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/files/filesUsecases"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/products"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/products/productsUsecases"
@@ -27,6 +29,7 @@ type IProductsHandler interface {
 	FindProducts(c *fiber.Ctx) error
 	AddProduct(c *fiber.Ctx) error
 	UpdateProduct(c *fiber.Ctx) error
+	DeleteProduct(c *fiber.Ctx) error
 }
 
 type productsHandler struct {
@@ -149,4 +152,41 @@ func (h *productsHandler) UpdateProduct(c *fiber.Ctx) error {
 		).Res()
 	}
 	return entities.NewResponse(c).Success(fiber.StatusOK, product).Res()
+}
+
+func (h *productsHandler) DeleteProduct(c *fiber.Ctx) error {
+	productId := strings.Trim(c.Params("product_id"), " ")
+
+	product, err := h.productsUsecase.FindOneProduct(productId)
+	if err != nil {
+		return entities.NewResponse(c).Error(
+			fiber.ErrInternalServerError.Code,
+			string(deleteProductsErr),
+			err.Error(),
+		).Res()
+	}
+
+	deleteFileReq := make([]*files.DeleteFileReq, 0)
+	for _, p := range product.Images {
+		deleteFileReq = append(deleteFileReq, &files.DeleteFileReq{
+			Destination: fmt.Sprintf("images/products/%s", p.FileName),
+		})
+	}
+	if err := h.filesUsecases.DeleteFileOnGCP(deleteFileReq); err != nil {
+		return entities.NewResponse(c).Error(
+			fiber.ErrInternalServerError.Code,
+			string(deleteProductsErr),
+			err.Error(),
+		).Res()
+	}
+
+	if err := h.productsUsecase.DeleteProduct(productId); err != nil {
+		return entities.NewResponse(c).Error(
+			fiber.ErrInternalServerError.Code,
+			string(deleteProductsErr),
+			err.Error(),
+		).Res()
+	}
+
+	return entities.NewResponse(c).Success(fiber.StatusNoContent, nil).Res()
 }
