@@ -10,6 +10,9 @@ import (
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/middlewares/middlewareRepositories"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/middlewares/middlewareUsecases"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/monitor/monitorHandlers"
+	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/orders/ordersHandlers"
+	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/orders/ordersRepositories"
+	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/orders/ordersUsecases"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/products/productsHandlers"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/products/productsRepositories"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/products/productsUsecases"
@@ -25,6 +28,7 @@ type IModuleFactory interface {
 	AppinfoModule()
 	FilesModule()
 	ProductsModule()
+	OrdersModule()
 }
 
 type moduleFactory struct {
@@ -113,4 +117,18 @@ func (m *moduleFactory) ProductsModule() {
 	router.Get("/:product_id", m.mid.ApiKeyAuth(), productsHandler.FindOneProduct)
 
 	router.Delete("/:product_id", m.mid.JwtAuth(), m.mid.Authorize(2), productsHandler.DeleteProduct)
+}
+
+func (m *moduleFactory) OrdersModule() {
+	filesUsecases := filesUsecases.FilesUsecase(m.s.cfg)
+
+	productsRepository := productsRepositories.ProductsRepository(m.s.db, m.s.cfg, filesUsecases)
+
+	ordersRepository := ordersRepositories.OrdersRepository(m.s.db)
+	ordersUsecase := ordersUsecases.OrdersUsecase(ordersRepository, productsRepository)
+	ordersHandler := ordersHandlers.OrdersHandler(m.s.cfg, ordersUsecase)
+
+	router := m.r.Group("/orders")
+
+	router.Get("/:order_id", m.mid.JwtAuth(), m.mid.ParamsCheck(), ordersHandler.FindOneOrder)
 }
