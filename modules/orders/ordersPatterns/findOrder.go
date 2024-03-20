@@ -1,4 +1,4 @@
-package ordersPattern
+package ordersPatterns
 
 import (
 	"context"
