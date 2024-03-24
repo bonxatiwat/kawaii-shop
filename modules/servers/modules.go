@@ -4,7 +4,6 @@ import (
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/appinfo/appinfoHandlers"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/appinfo/appinfoRepositories"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/appinfo/appinfoUsecases"
-	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/files/filesHandlers"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/files/filesUsecases"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/middlewares/middlewareHandlers"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/middlewares/middlewareRepositories"
@@ -13,9 +12,7 @@ import (
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/orders/ordersHandlers"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/orders/ordersRepositories"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/orders/ordersUsecases"
-	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/products/productsHandlers"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/products/productsRepositories"
-	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/products/productsUsecases"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/users/usersHandlers"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/users/usersRepositories"
 	"github.com/bonxatiwat/kawaii-shop-tutortial/modules/users/usersUsecases"
@@ -26,8 +23,8 @@ type IModuleFactory interface {
 	MonitorModule()
 	UsersModule()
 	AppinfoModule()
-	FilesModule()
-	ProductsModule()
+	FilesModule() IFilesModule
+	ProductsModule() IProductsModule
 	OrdersModule()
 }
 
@@ -89,34 +86,6 @@ func (m *moduleFactory) AppinfoModule() {
 	router.Get("/apikey", m.mid.JwtAuth(), m.mid.Authorize(2), handler.GenerateApiKey)
 
 	router.Delete("/:category_id/categories", m.mid.JwtAuth(), m.mid.Authorize(2), handler.RemoveCategory)
-}
-
-func (m *moduleFactory) FilesModule() {
-	usecase := filesUsecases.FilesUsecase(m.s.cfg)
-	handler := filesHandlers.FilesHandler(m.s.cfg, usecase)
-
-	router := m.r.Group("/files")
-
-	router.Post("/upload", m.mid.JwtAuth(), m.mid.Authorize(2), handler.UploadFiles)
-	router.Patch("/delete", m.mid.JwtAuth(), m.mid.Authorize(2), handler.DeleteFile)
-}
-
-func (m *moduleFactory) ProductsModule() {
-	filesUsecases := filesUsecases.FilesUsecase(m.s.cfg)
-
-	productsRepository := productsRepositories.ProductsRepository(m.s.db, m.s.cfg, filesUsecases)
-	productsUsecase := productsUsecases.ProductsUsecase(productsRepository)
-	productsHandler := productsHandlers.ProductsHandler(m.s.cfg, productsUsecase, filesUsecases)
-
-	router := m.r.Group("/products")
-
-	router.Post("/", m.mid.JwtAuth(), m.mid.Authorize(2), productsHandler.AddProduct)
-	router.Patch("/:product_id", m.mid.JwtAuth(), m.mid.Authorize(2), productsHandler.UpdateProduct)
-
-	router.Get("/", m.mid.ApiKeyAuth(), productsHandler.FindProducts)
-	router.Get("/:product_id", m.mid.ApiKeyAuth(), productsHandler.FindOneProduct)
-
-	router.Delete("/:product_id", m.mid.JwtAuth(), m.mid.Authorize(2), productsHandler.DeleteProduct)
 }
 
 func (m *moduleFactory) OrdersModule() {

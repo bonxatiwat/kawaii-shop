@@ -44,7 +44,7 @@ func (r *Response) Error(code int, tractId, msg string) IResponse {
 		Msg:     msg,
 	}
 	r.IsError = true
-	kawaiilogger.InitKawaiiLogger(r.Context, &r.ErrorRes, code).Print().Save()
+	kawaiilogger.InitKawaiiLogger(r.Context, &r.ErrorRes, code).Print()
 	return r
 }
 
