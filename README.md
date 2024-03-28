@@ -1,4 +1,4 @@
-<h1>Kawaii Shop</h1>
+<h1>Kawaii Shop Tutorial</h1>
 Kawaii shop is a mini REST API e-commerce project that made by Golang
 
 <h2>Required</h2>
