@@ -84,8 +84,8 @@ FILE_LOG_PATH=
 
 <h2>Postman</h2>
 <ul>
-    <li><a href="./kawaii-shop-tutorial.postman_collection.json">Collection</a></li>
-    <li><a href="./kawaii-shop-tutorial.postman_environment.json">Environment</a></li>
+    <li><a href="./kawaii-shop.postman_collection.json">Collection</a></li>
+    <li><a href="./kawaii-shop.postman_environment.json">Environment</a></li>
 </ul>
 
 <h2>In case you don't want to use Google Cloud storage, Please follow this step</h2>
